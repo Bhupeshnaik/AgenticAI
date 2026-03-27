@@ -5,6 +5,12 @@ All settings loaded from environment variables with sensible defaults.
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from backend dir or parent dir
+_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
 
 
 @dataclass
