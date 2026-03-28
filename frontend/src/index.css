@@ -9,7 +9,7 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-800 min-h-screen;
+    @apply bg-white text-black min-h-screen;
   }
 
   * {
@@ -20,16 +20,16 @@
     @apply w-1.5 h-1.5;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    @apply bg-white;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    @apply bg-brand-500 rounded-full;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white border border-gray-200 rounded-xl p-4 shadow-sm;
+    @apply bg-white border border-brand-200 rounded-xl p-4 shadow-sm;
   }
 
   .card-header {
@@ -37,7 +37,7 @@
   }
 
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-black;
   }
 
   .btn {
@@ -49,25 +49,25 @@
   }
 
   .btn-secondary {
-    @apply btn bg-white hover:bg-gray-50 text-black border border-brand-500 focus:ring-brand-500;
+    @apply btn bg-white hover:bg-brand-50 text-black border border-brand-500 focus:ring-brand-500;
   }
 
   .btn-danger {
-    @apply btn bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 focus:ring-red-400;
+    @apply btn bg-white hover:bg-red-50 text-black border border-red-400 focus:ring-red-400;
   }
 
   .input {
-    @apply bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all;
+    @apply bg-white border border-brand-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all;
   }
 
-  .status-live     { @apply badge bg-green-50 text-green-700 border border-green-200; }
-  .status-draft    { @apply badge bg-gray-100 text-gray-600 border border-gray-200; }
-  .status-pending  { @apply badge bg-yellow-50 text-yellow-700 border border-yellow-200; }
-  .status-error    { @apply badge bg-red-50 text-red-600 border border-red-200; }
-  .status-approved { @apply badge bg-blue-50 text-blue-700 border border-blue-200; }
+  .status-live     { @apply badge border border-brand-300; }
+  .status-draft    { @apply badge border border-black/20; }
+  .status-pending  { @apply badge border border-brand-300; }
+  .status-error    { @apply badge border border-red-300; }
+  .status-approved { @apply badge border border-brand-500; }
 
-  .priority-critical { @apply badge bg-red-50 text-red-700 border border-red-200; }
-  .priority-high     { @apply badge bg-orange-50 text-orange-700 border border-orange-200; }
-  .priority-medium   { @apply badge bg-yellow-50 text-yellow-700 border border-yellow-200; }
-  .priority-low      { @apply badge bg-gray-100 text-gray-600 border border-gray-200; }
+  .priority-critical { @apply badge border border-red-400; }
+  .priority-high     { @apply badge border border-brand-400; }
+  .priority-medium   { @apply badge border border-brand-300; }
+  .priority-low      { @apply badge border border-black/20; }
 }
