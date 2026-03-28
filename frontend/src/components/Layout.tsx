@@ -72,8 +72,8 @@ export default function Layout() {
         </div>
 
         {/* App subtitle */}
-        <div className="px-5 py-2 bg-brand-500">
-          <p className="text-xs font-semibold text-white tracking-wide uppercase">Marketing AI Platform</p>
+        <div className="px-5 py-2 border-b border-gray-200">
+          <p className="text-xs font-semibold text-gray-500 tracking-wide uppercase">Marketing AI Platform</p>
         </div>
 
         {/* Nav */}
@@ -85,8 +85,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-brand-800 hover:bg-brand-50'
+                    ? 'bg-white text-black border border-brand-500 shadow-sm'
+                    : 'text-black hover:bg-gray-50 hover:border hover:border-gray-200'
                 }`
               }
             >

@@ -33,7 +33,7 @@
   }
 
   .card-header {
-    @apply text-sm font-semibold text-brand-500 uppercase tracking-wider mb-3;
+    @apply text-sm font-semibold text-black uppercase tracking-wider mb-3;
   }
 
   .badge {
@@ -45,11 +45,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-brand-800 hover:bg-brand-700 text-white focus:ring-brand-500;
+    @apply btn bg-brand-500 hover:bg-brand-600 text-white focus:ring-brand-500;
   }
 
   .btn-secondary {
-    @apply btn bg-white hover:bg-gray-50 text-brand-800 border border-brand-800 focus:ring-brand-500;
+    @apply btn bg-white hover:bg-gray-50 text-black border border-brand-500 focus:ring-brand-500;
   }
 
   .btn-danger {
