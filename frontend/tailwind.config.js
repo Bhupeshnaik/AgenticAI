@@ -5,16 +5,16 @@ export default {
     extend: {
       colors: {
         brand: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50:  '#e6f7fd',
+          100: '#b3e5f9',
+          200: '#80d4f5',
+          300: '#4dc2f1',
+          400: '#26b4ee',
+          500: '#00AEEF',  // Barclays primary cyan
+          600: '#0099d4',
+          700: '#007dae',
+          800: '#00395D',  // Barclays dark navy
+          900: '#002840',
         },
       },
       fontFamily: {
