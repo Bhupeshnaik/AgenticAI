@@ -7,6 +7,7 @@ from .campaign_orchestration_agent import CampaignOrchestrationAgent
 from .lead_management_agent import LeadManagementAgent
 from .nurture_agent import NurtureAgent
 from .analytics_agent import AnalyticsAgent
+from .booth_agent import BoothHostAgent
 
 __all__ = [
     "StrategyAgent",
@@ -18,4 +19,5 @@ __all__ = [
     "LeadManagementAgent",
     "NurtureAgent",
     "AnalyticsAgent",
+    "BoothHostAgent",
 ]

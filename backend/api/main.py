@@ -20,6 +20,7 @@ from tools.azure_cosmos_tools import (
     list_campaigns, get_campaign, update_campaign_status,
     list_leads, get_lead, list_assets, list_compliance_records,
 )
+from api.avatar import router as avatar_router
 
 logging.basicConfig(level=getattr(logging, settings.log_level, logging.INFO))
 logger = logging.getLogger(__name__)
@@ -86,6 +87,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(avatar_router)
 
 
 # ─── Health Check ──────────────────────────────────────────────────────────────

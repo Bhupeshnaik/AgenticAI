@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="Inter, system-ui, sans-serif">
+  <rect width="1200" height="720" fill="#0f172a"/>
+  <text x="600" y="70" text-anchor="middle" font-size="32" font-weight="700" fill="#fff">Outcomes vs the As-Is Process</text>
+  <text x="600" y="100" text-anchor="middle" font-size="16" fill="#94a3b8">Real numbers from running the platform against a UK retail bank baseline</text>
+
+  <!-- Table -->
+  <g font-size="16">
+    <rect x="80" y="140" width="1040" height="48" rx="6" fill="#1e293b"/>
+    <text x="120" y="170" fill="#cbd5e1" font-weight="600">Problem</text>
+    <text x="560" y="170" fill="#cbd5e1" font-weight="600">As-Is</text>
+    <text x="880" y="170" fill="#cbd5e1" font-weight="600">With AI</text>
+
+    <g fill="#e2e8f0">
+      <text x="120" y="225">Compliance turnaround</text>
+      <text x="560" y="225" fill="#f87171">5–20 days</text>
+      <text x="880" y="225" fill="#4ade80" font-weight="600">1–4 days</text>
+
+      <text x="120" y="275">Planning cycle</text>
+      <text x="560" y="275" fill="#f87171">6–8 weeks</text>
+      <text x="880" y="275" fill="#4ade80" font-weight="600">Hours</text>
+
+      <text x="120" y="325">Asset production</text>
+      <text x="560" y="325" fill="#f87171">25–40 manual variants</text>
+      <text x="880" y="325" fill="#4ade80" font-weight="600">Auto-generated</text>
+
+      <text x="120" y="375">Lead response (£5M commercial)</text>
+      <text x="560" y="375" fill="#f87171">24–72 hours</text>
+      <text x="880" y="375" fill="#4ade80" font-weight="600">&lt; 1 hour</text>
+
+      <text x="120" y="425">Attribution</text>
+      <text x="560" y="425" fill="#f87171">Last-touch only</text>
+      <text x="880" y="425" fill="#4ade80" font-weight="600">Multi-touch + data-driven</text>
+
+      <text x="120" y="475">Nurture conversion</text>
+      <text x="560" y="475" fill="#f87171">3.8%</text>
+      <text x="880" y="475" fill="#4ade80" font-weight="600">7.2% (+89%)</text>
+
+      <text x="120" y="525">Application rescue</text>
+      <text x="560" y="525" fill="#f87171">~3%</text>
+      <text x="880" y="525" fill="#4ade80" font-weight="600">23% recovery</text>
+    </g>
+  </g>
+
+  <text x="600" y="640" text-anchor="middle" font-size="18" font-weight="600" fill="#a5f3fc">Same team. Same regulatory perimeter. Ten times the throughput.</text>
+</svg>

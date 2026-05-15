@@ -62,6 +62,14 @@ class AzureSettings:
     event_grid_endpoint: str = os.getenv("AZURE_EVENT_GRID_ENDPOINT", "")
     event_grid_key: str = os.getenv("AZURE_EVENT_GRID_KEY", "")
 
+    # HeyGen Interactive Avatar (trade-show kiosk)
+    heygen_api_key: str = os.getenv("HEYGEN_API_KEY", "")
+    heygen_api_base: str = os.getenv("HEYGEN_API_BASE", "https://api.heygen.com")
+    heygen_avatar_id: str = os.getenv("HEYGEN_AVATAR_ID", "")
+    heygen_voice_id: str = os.getenv("HEYGEN_VOICE_ID", "")
+    heygen_quality: str = os.getenv("HEYGEN_QUALITY", "high")
+    heygen_language: str = os.getenv("HEYGEN_LANGUAGE", "en")
+
     # Application Settings
     app_name: str = "Bank Marketing AI Platform"
     app_version: str = "1.0.0"

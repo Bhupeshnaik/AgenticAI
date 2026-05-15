@@ -135,6 +135,60 @@ az containerapp update \
 | GET | `/api/analytics/overview` | Marketing performance overview |
 | GET | `/api/dashboard` | Dashboard summary |
 | GET | `/api/phases` | 8-phase lifecycle map |
+| POST | `/api/avatar/token` | Mint short-lived HeyGen streaming token (booth) |
+| GET | `/api/avatar/config` | Avatar / voice / language config for the kiosk |
+| GET | `/api/avatar/demos` | Catalog of demo videos and slides for the side panel |
+| POST | `/api/avatar/chat` | One booth conversational turn → spoken text + actions |
+| POST | `/api/avatar/lead` | Capture a booth visitor as a routed Lead |
+
+## Trade-show booth (HeyGen Interactive Avatar)
+
+The platform ships with a full kiosk-mode booth at **`/booth`** that uses
+HeyGen's photoreal interactive avatar to demo the platform to event visitors.
+
+```
+visitor speech --▶ Web Speech / Deepgram --▶ /api/avatar/chat
+                                                   │
+                                                   ▼
+                                       Booth Host Agent (Azure OpenAI)
+                                                   │
+                                                   ▼
+                              spoken text  +  [[ACTION:...]] tags
+                                                   │
+                            ┌──────────────────────┴──────────────────────┐
+                            ▼                                             ▼
+                   HeyGen Streaming Avatar                      Booth UI actions
+                   (WebRTC, lip-synced)                  (demo video, slide, lead form)
+```
+
+### Booth setup
+
+1. Record your photoreal avatar + voice clone in the [HeyGen Studio](https://app.heygen.com).
+   Note the **Avatar ID** and **Voice ID**.
+2. Set `HEYGEN_API_KEY`, `HEYGEN_AVATAR_ID`, and `HEYGEN_VOICE_ID` in `.env`.
+3. Drop your demo MP4s into `frontend/public/booth-assets/demos/`. See
+   `frontend/public/booth-assets/README.md` for naming. The platform
+   ships with the architecture / ROI / phase-map slides already.
+4. Run the backend and frontend as normal, then open
+   <http://localhost:5173/booth> in full-screen on the kiosk TV.
+
+The kiosk works **without** a HeyGen key configured — it falls back to a
+demo-mode bubble UI, useful for local dev and previewing the
+conversational flow.
+
+### Action protocol
+
+The Booth Host agent appends one or more action tags to its spoken
+replies; the frontend parses them out before sending text to HeyGen
+for lip-sync.
+
+| Tag | Effect |
+|---|---|
+| `[[ACTION:show_demo\|id=<demo_id>]]` | Plays a demo video next to the avatar |
+| `[[ACTION:show_slide\|id=<slide_id>]]` | Swaps the side panel to a static slide |
+| `[[ACTION:open_form\|type=lead]]` | Opens the lead-capture modal |
+| `[[ACTION:handoff\|agent=<key>]]` | Flags a specialist hand-off |
+| `[[ACTION:end_topic]]` | Returns the side panel to idle |
 
 ## Multi-Agent Workflows
 

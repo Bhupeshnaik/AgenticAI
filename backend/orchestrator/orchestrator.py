@@ -18,6 +18,7 @@ from agents import (
     LeadManagementAgent,
     NurtureAgent,
     AnalyticsAgent,
+    BoothHostAgent,
 )
 from tools.azure_cosmos_tools import save_agent_message, get_session_history
 
@@ -36,6 +37,7 @@ AGENT_REGISTRY = {
     "lead": LeadManagementAgent,
     "nurture": NurtureAgent,
     "analytics": AnalyticsAgent,
+    "booth": BoothHostAgent,
 }
 
 # Phase to agent mapping

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="Inter, system-ui, sans-serif">
+  <rect width="1200" height="720" fill="#fafafa"/>
+  <text x="600" y="60" text-anchor="middle" font-size="32" font-weight="700" fill="#0f172a">8-Phase Marketing Lifecycle</text>
+  <text x="600" y="92" text-anchor="middle" font-size="16" fill="#475569">Each phase is owned by a specialist agent — handoffs are zero-friction.</text>
+
+  <g font-family="Inter, system-ui, sans-serif">
+    <!-- Row 1 -->
+    <g>
+      <rect x="60"  y="150" width="260" height="110" rx="14" fill="#6366f1"/>
+      <text x="190" y="190" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 1</text>
+      <text x="190" y="218" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Strategy & Planning</text>
+      <text x="190" y="242" text-anchor="middle" fill="#e0e7ff" font-size="13">Annual + quarterly briefs</text>
+    </g>
+    <g>
+      <rect x="350" y="150" width="260" height="110" rx="14" fill="#8b5cf6"/>
+      <text x="480" y="190" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 2</text>
+      <text x="480" y="218" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Copy & Assets</text>
+      <text x="480" y="242" text-anchor="middle" fill="#ede9fe" font-size="13">Multi-channel + DAM</text>
+    </g>
+    <g>
+      <rect x="640" y="150" width="260" height="110" rx="14" fill="#06b6d4"/>
+      <text x="770" y="190" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 3</text>
+      <text x="770" y="218" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Segmentation</text>
+      <text x="770" y="242" text-anchor="middle" fill="#cffafe" font-size="13">GDPR-clean audience</text>
+    </g>
+    <g>
+      <rect x="930" y="150" width="220" height="110" rx="14" fill="#ef4444"/>
+      <text x="1040" y="190" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 4</text>
+      <text x="1040" y="218" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Compliance</text>
+      <text x="1040" y="242" text-anchor="middle" fill="#fee2e2" font-size="13">FCA + Consumer Duty</text>
+    </g>
+
+    <!-- Row 2 -->
+    <g>
+      <rect x="60"  y="350" width="260" height="110" rx="14" fill="#f59e0b"/>
+      <text x="190" y="390" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 5</text>
+      <text x="190" y="418" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Launch & Execution</text>
+      <text x="190" y="442" text-anchor="middle" fill="#fef3c7" font-size="13">Multi-channel orchestration</text>
+    </g>
+    <g>
+      <rect x="350" y="350" width="260" height="110" rx="14" fill="#10b981"/>
+      <text x="480" y="390" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 6</text>
+      <text x="480" y="418" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Lead Management</text>
+      <text x="480" y="442" text-anchor="middle" fill="#d1fae5" font-size="13">Score + route + SLA</text>
+    </g>
+    <g>
+      <rect x="640" y="350" width="260" height="110" rx="14" fill="#3b82f6"/>
+      <text x="770" y="390" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 7</text>
+      <text x="770" y="418" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Nurture</text>
+      <text x="770" y="442" text-anchor="middle" fill="#dbeafe" font-size="13">Journeys + NBA + rescue</text>
+    </g>
+    <g>
+      <rect x="930" y="350" width="220" height="110" rx="14" fill="#ec4899"/>
+      <text x="1040" y="390" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">PHASE 8</text>
+      <text x="1040" y="418" text-anchor="middle" fill="#fff" font-weight="600" font-size="18">Measurement</text>
+      <text x="1040" y="442" text-anchor="middle" fill="#fce7f3" font-size="13">Attribution + ROI</text>
+    </g>
+  </g>
+
+  <text x="600" y="560" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">Strategy → Launch in hours, not weeks.</text>
+  <text x="600" y="595" text-anchor="middle" font-size="14" fill="#475569">Every phase is a specialist agent; the orchestrator passes context between them.</text>
+</svg>

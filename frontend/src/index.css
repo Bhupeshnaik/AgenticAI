@@ -60,6 +60,10 @@
     @apply bg-white border border-brand-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all;
   }
 
+  .form-input {
+    @apply w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all;
+  }
+
   .status-live     { @apply badge border border-brand-300; }
   .status-draft    { @apply badge border border-black/20; }
   .status-pending  { @apply badge border border-brand-300; }

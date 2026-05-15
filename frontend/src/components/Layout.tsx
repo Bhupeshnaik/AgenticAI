@@ -12,6 +12,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   MapIcon,
+  PresentationChartBarIcon,
 } from '@heroicons/react/24/outline'
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/leads',      label: 'Leads',         icon: UserGroupIcon },
   { to: '/compliance', label: 'Compliance',    icon: ShieldCheckIcon },
   { to: '/analytics',  label: 'Analytics',     icon: ChartBarIcon },
+  { to: '/booth',      label: 'Booth Mode',    icon: PresentationChartBarIcon },
 ]
 
 function BarclaysLogo({ className = '' }: { className?: string }) {
