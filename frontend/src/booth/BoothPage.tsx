@@ -6,7 +6,7 @@ import IdleScreen from './components/IdleScreen'
 import LeadFormModal from './components/LeadFormModal'
 import PushToTalk from './components/PushToTalk'
 import TranscriptRail, { type TranscriptTurn } from './components/TranscriptRail'
-import { fetchDemoCatalog, sendBoothMessage } from './api'
+import { fetchDemoCatalog, sendBoothMessage, type BoothLeadResult } from './api'
 import { useHeygenAvatar } from './useHeygenAvatar'
 import { useSpeechToText } from './useSpeechToText'
 import type {
@@ -285,9 +285,19 @@ export default function BoothPage() {
         interestTopic={interestTopic}
         sessionId={sessionId}
         onClose={() => setPanel({ kind: 'idle' })}
-        onSubmitted={() => {
-          /* keep visitor on screen briefly; goIdle will be triggered by the
-             form's own auto-close + the idle timer */
+        onSubmitted={(lead: BoothLeadResult) => {
+          // Close the loop visibly — have the avatar speak the personalised
+          // promise the Lead Management agent generated.
+          const intro = "Brilliant, you're in."
+          const line = lead.routing.promise_text
+            ? `${intro} ${lead.routing.promise_text}`
+            : `${intro} Our team will be in touch shortly.`
+          setLastSpoken(line)
+          setTurns((prev) => [
+            ...prev,
+            { id: `a-lead-${Date.now()}`, role: 'avatar', content: line },
+          ])
+          void speak(line)
         }}
       />
     </div>

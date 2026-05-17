@@ -1,14 +1,25 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { submitBoothLead, type BoothLeadPayload } from '../api'
+import {
+  submitBoothLead,
+  type BoothLeadPayload,
+  type BoothLeadResult,
+} from '../api'
 
 interface Props {
   open: boolean
   interestTopic?: string | null
   sessionId?: string | null
   onClose: () => void
-  onSubmitted: () => void
+  onSubmitted: (result: BoothLeadResult) => void
+}
+
+const TIER_BADGE: Record<string, { label: string; className: string }> = {
+  PRIORITY: { label: 'Priority lead', className: 'bg-red-100 text-red-700 ring-red-200' },
+  HIGH: { label: 'High priority', className: 'bg-amber-100 text-amber-800 ring-amber-200' },
+  MEDIUM: { label: 'Standard', className: 'bg-sky-100 text-sky-700 ring-sky-200' },
+  LOW: { label: 'Nurture', className: 'bg-slate-100 text-slate-700 ring-slate-200' },
 }
 
 export default function LeadFormModal({
@@ -25,7 +36,7 @@ export default function LeadFormModal({
   const [notes, setNotes] = useState('')
   const [consent, setConsent] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
+  const [result, setResult] = useState<BoothLeadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
@@ -35,7 +46,7 @@ export default function LeadFormModal({
     setRole('')
     setNotes('')
     setConsent(true)
-    setDone(false)
+    setResult(null)
     setError(null)
   }
 
@@ -55,13 +66,13 @@ export default function LeadFormModal({
         session_id: sessionId || undefined,
         consent,
       }
-      await submitBoothLead(payload)
-      setDone(true)
-      onSubmitted()
+      const lead = await submitBoothLead(payload)
+      setResult(lead)
+      onSubmitted(lead)
       setTimeout(() => {
         reset()
         onClose()
-      }, 2200)
+      }, 6500)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Submission failed')
     } finally {
@@ -87,12 +98,38 @@ export default function LeadFormModal({
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
           >
-            {done ? (
-              <div className="p-10 text-center">
-                <CheckCircleIcon className="w-16 h-16 mx-auto text-emerald-500" />
-                <h3 className="mt-4 text-2xl font-semibold text-slate-900">Got it — thanks!</h3>
-                <p className="mt-2 text-slate-600">
-                  Our team will be in touch within a couple of business days.
+            {result ? (
+              <div className="p-8 text-center">
+                <CheckCircleIcon className="w-14 h-14 mx-auto text-emerald-500" />
+                <h3 className="mt-3 text-2xl font-semibold text-slate-900">
+                  Got it — thanks, {name.split(' ')[0] || 'you'}!
+                </h3>
+
+                {result.routing.tier && TIER_BADGE[result.routing.tier] && (
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ring-1 ${
+                        TIER_BADGE[result.routing.tier].className
+                      }`}
+                    >
+                      {TIER_BADGE[result.routing.tier].label}
+                      {result.routing.score != null && (
+                        <span className="opacity-70">· score {result.routing.score}</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {result.routing.promise_text && (
+                  <p className="mt-4 text-lg text-slate-800 font-medium">
+                    {result.routing.promise_text}
+                  </p>
+                )}
+
+                <p className="mt-3 text-sm text-slate-500">
+                  Your details have been routed through the Lead Management agent
+                  with full SLA tracking. Lead ID:{' '}
+                  <span className="font-mono">{result.lead_id}</span>
                 </p>
               </div>
             ) : (

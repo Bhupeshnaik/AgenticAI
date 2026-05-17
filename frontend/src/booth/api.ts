@@ -60,10 +60,28 @@ export interface BoothLeadPayload {
   consent: boolean
 }
 
-export async function submitBoothLead(payload: BoothLeadPayload): Promise<{
+export interface BoothLeadRouting {
+  score: number | null
+  tier: 'PRIORITY' | 'HIGH' | 'MEDIUM' | 'LOW' | null
+  assigned_team: string | null
+  priority: string | null
+  sla_hours: number | null
+  sla_deadline: string | null
+  promise_text: string | null
+}
+
+export interface BoothLeadResult {
   lead_id: string
+  session_id: string
   status: string
-}> {
-  const { data } = await api.post('/avatar/lead', payload)
+  agent_message: string
+  routing: BoothLeadRouting
+  captured_at: string
+}
+
+export async function submitBoothLead(
+  payload: BoothLeadPayload,
+): Promise<BoothLeadResult> {
+  const { data } = await api.post<BoothLeadResult>('/avatar/lead', payload)
   return data
 }

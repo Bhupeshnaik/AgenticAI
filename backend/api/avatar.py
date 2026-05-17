@@ -19,12 +19,13 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from agents.lead_management_agent import LeadManagementAgent
 from config.settings import settings
 from orchestrator.orchestrator import orchestrator
 
@@ -183,6 +184,27 @@ class BoothLeadRequest(BaseModel):
     consent: bool = True
 
 
+class BoothLeadRouting(BaseModel):
+    """Structured slice of what the Lead Management agent decided about this lead."""
+
+    score: Optional[int] = None
+    tier: Optional[str] = None  # PRIORITY | HIGH | MEDIUM | LOW
+    assigned_team: Optional[str] = None
+    priority: Optional[str] = None
+    sla_hours: Optional[float] = None
+    sla_deadline: Optional[str] = None
+    promise_text: Optional[str] = None  # Human-readable "we'll be in touch in X hours"
+
+
+class BoothLeadResponse(BaseModel):
+    lead_id: str
+    session_id: str
+    status: str
+    agent_message: str
+    routing: BoothLeadRouting
+    captured_at: str
+
+
 class TranscriptTurn(BaseModel):
     role: str
     content: str
@@ -289,15 +311,115 @@ async def booth_chat(request: BoothChatRequest):
 
 # ─── Lead capture ─────────────────────────────────────────────────────────────
 
-@router.post("/lead")
+_TEAM_LABELS = {
+    "commercial_rm": "a senior Relationship Manager",
+    "mortgage_specialist": "a Mortgage Specialist",
+    "call_centre_priority": "our priority call centre",
+    "call_centre_standard": "our call centre",
+    "digital_self_serve": "our digital onboarding team",
+}
+
+
+def _format_promise(sla_hours: Optional[float], team: Optional[str]) -> str:
+    """Turn SLA + team into the line a visitor sees on the booth success screen."""
+    team_label = _TEAM_LABELS.get(team or "", "our team")
+    if sla_hours is None:
+        return f"{team_label.capitalize()} will be in touch shortly."
+    if sla_hours <= 1:
+        return f"{team_label.capitalize()} will reach out within the hour."
+    if sla_hours < 24:
+        return f"{team_label.capitalize()} will reach out within {int(sla_hours)} hours."
+    days = round(sla_hours / 24)
+    plural = "" if days == 1 else "s"
+    return f"{team_label.capitalize()} will reach out within {days} working day{plural}."
+
+
+def _extract_routing_from_tool_calls(tool_calls: list[dict]) -> dict[str, Any]:
+    """Pull score + routing fields out of the lead agent's tool-call results."""
+    extracted: dict[str, Any] = {}
+    for call in tool_calls or []:
+        name = call.get("tool")
+        result = call.get("result") or {}
+        if not isinstance(result, dict):
+            continue
+        if name == "score_lead":
+            extracted.setdefault("score", result.get("total_score"))
+            extracted.setdefault("tier", result.get("score_tier"))
+        elif name == "route_lead":
+            extracted.setdefault("assigned_team", result.get("assigned_team"))
+            extracted.setdefault("priority", result.get("priority"))
+            extracted.setdefault("sla_hours", result.get("sla_hours"))
+            extracted.setdefault("sla_deadline", result.get("sla_deadline"))
+    return extracted
+
+
+def _fallback_score_and_route(
+    lead_id: str, request: BoothLeadRequest
+) -> dict[str, Any]:
+    """
+    Run the deterministic scoring + routing handlers directly so the booth
+    always returns structured guidance — even when Azure OpenAI is offline
+    and the LLM never decided to call its tools.
+    """
+    # A booth visitor who filled in the form is a strong intent signal.
+    # We don't know value, so assume a mid-band commercial enquiry — the
+    # platform-overview demo crowd skews towards £100k-ish opportunities.
+    product = (request.interest_topic or "platform_overview").lower()
+    if "mortgage" in product:
+        product_type = "mortgage"
+        estimated_value = 350_000
+    elif "commercial" in product or "business" in product or "lending" in product:
+        # Booth visitors who self-identify as commercial-lending are exactly
+        # the cohort the platform pitches its sub-1-hour RM routing at.
+        product_type = "business_banking"
+        estimated_value = 500_000
+    elif "loan" in product:
+        product_type = "personal_loan"
+        estimated_value = 15_000
+    else:
+        product_type = "business_banking"
+        estimated_value = 150_000
+
+    agent = LeadManagementAgent()
+    score_result = agent._score_lead(
+        lead_id=lead_id,
+        product_type=product_type,
+        estimated_value_gbp=estimated_value,
+        intent_signal="form_submit",
+        customer_type="prospect",
+        engagement_recency_days=0,
+    )
+    route_result = agent._route_lead(
+        lead_id=lead_id,
+        lead_score=score_result["total_score"],
+        product_type=product_type,
+        estimated_value_gbp=estimated_value,
+        customer_type="prospect",
+    )
+    return {
+        "score": score_result["total_score"],
+        "tier": score_result["score_tier"],
+        "assigned_team": route_result["assigned_team"],
+        "priority": route_result["priority"],
+        "sla_hours": route_result["sla_hours"],
+        "sla_deadline": route_result["sla_deadline"],
+    }
+
+
+@router.post("/lead", response_model=BoothLeadResponse)
 async def capture_booth_lead(request: BoothLeadRequest):
     """
     Persist a booth visitor as a Lead via the Lead Management Agent so the
     rest of the CRM / SLA / routing machinery picks them up automatically.
+
+    Returns the agent's structured scoring + routing decision so the kiosk
+    can show the visitor a personalised confirmation ("a senior RM will
+    reach out within the hour") rather than a generic thank-you.
     """
     if not request.consent:
         raise HTTPException(status_code=400, detail="Visitor consent required to capture lead")
 
+    lead_id = f"booth-{uuid.uuid4().hex[:10]}"
     session_id = orchestrator.new_session()
     summary = (
         f"Capture booth visitor lead: {request.name} ({request.email})"
@@ -314,23 +436,45 @@ async def capture_booth_lead(request: BoothLeadRequest):
         context={
             "source_channel": "trade_show_booth",
             "product_interest": request.interest_topic or "platform_overview",
-            "intent_signal": "booth_visitor_consented",
+            "intent_signal": "form_submit",
             "customer_name": request.name,
             "contact_email": request.email,
             "company": request.company,
             "role": request.role,
             "notes": request.notes,
             "booth_session_id": request.session_id,
+            "lead_id": lead_id,
         },
     )
 
-    return {
-        "lead_id": f"booth-{uuid.uuid4().hex[:10]}",
-        "session_id": session_id,
-        "status": "captured",
-        "agent_response": result.get("response"),
-        "captured_at": datetime.now(timezone.utc).isoformat(),
-    }
+    # Prefer the agent's own tool-call decisions if it made them; otherwise
+    # run the deterministic scoring handlers so the booth never falls back
+    # to a generic "we'll be in touch".
+    routing_fields = _extract_routing_from_tool_calls(result.get("tool_calls") or [])
+    if not routing_fields.get("sla_hours"):
+        routing_fields = {**_fallback_score_and_route(lead_id, request), **routing_fields}
+
+    routing = BoothLeadRouting(
+        score=routing_fields.get("score"),
+        tier=routing_fields.get("tier"),
+        assigned_team=routing_fields.get("assigned_team"),
+        priority=routing_fields.get("priority"),
+        sla_hours=routing_fields.get("sla_hours"),
+        sla_deadline=routing_fields.get("sla_deadline"),
+        promise_text=_format_promise(
+            routing_fields.get("sla_hours"),
+            routing_fields.get("assigned_team"),
+        ),
+    )
+
+    return BoothLeadResponse(
+        lead_id=lead_id,
+        session_id=session_id,
+        status="captured",
+        agent_message=result.get("response") or "",
+        routing=routing,
+        captured_at=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 # ─── Transcript persistence ───────────────────────────────────────────────────
