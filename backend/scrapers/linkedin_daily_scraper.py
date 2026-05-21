@@ -29,12 +29,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import html
 import json
 import logging
 import os
+import smtplib
+import ssl
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, time, timedelta, timezone
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable
 from urllib.parse import urlparse
@@ -145,12 +149,14 @@ class LinkedInDailyScraper:
         queries: Iterable[str] | None = None,
         output_dir: Path | None = None,
         run_hour_utc: int = 7,
+        email_enabled: bool = True,
     ) -> None:
         self.queries = list(queries or DEFAULT_QUERIES)
         self.output_dir = output_dir or Path(__file__).resolve().parents[2] / "data" / "linkedin"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.aggregate_path = self.output_dir / "all_posts.jsonl"
         self.run_hour_utc = run_hour_utc
+        self.email_enabled = email_enabled
 
     @staticmethod
     def _match_keywords(text: str) -> list[str]:
@@ -209,6 +215,11 @@ class LinkedInDailyScraper:
         new_posts = list(results.values())
         log.info("Cycle complete — %d new relevant posts", len(new_posts))
         self._write(new_posts)
+        if self.email_enabled and new_posts:
+            try:
+                self._send_email_digest(new_posts)
+            except Exception:
+                log.exception("Failed to send email digest")
         return new_posts
 
     def _write(self, posts: list[LinkedInPost]) -> None:
@@ -224,6 +235,88 @@ class LinkedInDailyScraper:
                 fh.write(line + "\n")
                 agg.write(line + "\n")
         log.info("Wrote %d posts to %s", len(posts), daily_path)
+
+    @staticmethod
+    def _render_digest(posts: list[LinkedInPost]) -> tuple[str, str, str]:
+        """Return (subject, text_body, html_body) for the digest email."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        subject = f"LinkedIn DDD / Agentic AI digest — {today} ({len(posts)} posts)"
+
+        text_lines = [
+            f"LinkedIn daily digest — {today} UTC",
+            f"{len(posts)} new posts matching DDD / agentic-AI keywords.",
+            "",
+        ]
+        html_rows: list[str] = []
+        for i, p in enumerate(posts, 1):
+            kws = ", ".join(p.matched_keywords) or "—"
+            text_lines.append(f"[{i}] {p.title or '(no title)'}")
+            text_lines.append(f"    keywords: {kws}")
+            text_lines.append(f"    {p.snippet}")
+            text_lines.append(f"    {p.url}")
+            text_lines.append("")
+            html_rows.append(
+                "<li style='margin-bottom:18px'>"
+                f"<a href='{html.escape(p.url)}'><b>{html.escape(p.title or '(no title)')}</b></a>"
+                f"<div style='color:#555;font-size:12px'>keywords: {html.escape(kws)}</div>"
+                f"<div>{html.escape(p.snippet)}</div>"
+                "</li>"
+            )
+
+        html_body = (
+            "<html><body style='font-family:Arial,sans-serif;font-size:14px'>"
+            f"<h2>LinkedIn daily digest — {today} UTC</h2>"
+            f"<p>{len(posts)} new posts matching DDD / agentic-AI keywords.</p>"
+            f"<ol>{''.join(html_rows)}</ol>"
+            "</body></html>"
+        )
+        return subject, "\n".join(text_lines), html_body
+
+    def _send_email_digest(self, posts: list[LinkedInPost]) -> None:
+        host = os.getenv("SMTP_HOST")
+        port = int(os.getenv("SMTP_PORT", "587"))
+        user = os.getenv("SMTP_USER")
+        password = os.getenv("SMTP_PASSWORD")
+        sender = os.getenv("SMTP_FROM", user or "")
+        recipient = os.getenv("SMTP_TO", "bhupeshnaik@gmail.com")
+
+        if not (host and user and password and sender):
+            log.warning(
+                "SMTP not fully configured — skipping email "
+                "(need SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM)"
+            )
+            return
+
+        subject, text_body, html_body = self._render_digest(posts)
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = recipient
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        ctx = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, context=ctx, timeout=30) as smtp:
+                smtp.login(user, password)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=30) as smtp:
+                smtp.starttls(context=ctx)
+                smtp.login(user, password)
+                smtp.send_message(msg)
+        log.info("Emailed digest to %s (%d posts)", recipient, len(posts))
+
+    def send_test_email(self) -> None:
+        """Send a one-off email with a synthetic post to verify SMTP wiring."""
+        demo = LinkedInPost(
+            id="test",
+            url="https://www.linkedin.com/posts/example",
+            title="Test post — domain-driven agentic AI case study",
+            snippet="This is a test digest entry to verify SMTP delivery.",
+            matched_keywords=["domain-driven", "agentic", "case study"],
+        )
+        self._send_email_digest([demo])
 
     def _seconds_until_next_run(self) -> float:
         now = datetime.now(timezone.utc)
@@ -249,6 +342,12 @@ class LinkedInDailyScraper:
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="LinkedIn daily scraper (SerpAPI)")
     p.add_argument("--once", action="store_true", help="Run a single cycle and exit")
+    p.add_argument("--no-email", action="store_true", help="Skip email digest")
+    p.add_argument(
+        "--test-email",
+        action="store_true",
+        help="Send a synthetic digest to verify SMTP and exit",
+    )
     p.add_argument(
         "--hour",
         type=int,
@@ -260,7 +359,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 async def _amain(argv: list[str]) -> int:
     args = _parse_args(argv)
-    scraper = LinkedInDailyScraper(run_hour_utc=args.hour)
+    scraper = LinkedInDailyScraper(
+        run_hour_utc=args.hour, email_enabled=not args.no_email
+    )
+    if args.test_email:
+        scraper.send_test_email()
+        return 0
     if args.once:
         await scraper.collect_once()
         return 0
