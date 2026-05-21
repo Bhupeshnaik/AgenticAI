@@ -1,6 +1,6 @@
 """
-LinkedIn Daily Scraper
-======================
+LinkedIn Daily Scraper (SerpAPI)
+================================
 
 Continuously runs once every 24 hours and collects LinkedIn posts that
 discuss:
@@ -12,15 +12,8 @@ discuss:
 Legality
 --------
 Direct scraping of LinkedIn HTML violates LinkedIn's User Agreement §8.2.
-This collector therefore only uses lawful, API-backed sources. Pick one
-via env vars:
-
-  LINKEDIN_SCRAPER_PROVIDER=serpapi     # Google search "site:linkedin.com"
-                                        #   SERPAPI_KEY required
-  LINKEDIN_SCRAPER_PROVIDER=rapidapi    # licensed LinkedIn data API
-                                        #   RAPIDAPI_KEY + RAPIDAPI_HOST required
-  LINKEDIN_SCRAPER_PROVIDER=linkedin    # official LinkedIn API (partner only)
-                                        #   LINKEDIN_ACCESS_TOKEN required
+This collector uses SerpAPI to query Google with ``site:linkedin.com/posts``
+— a lawful, indexed source. Requires ``SERPAPI_KEY`` in the environment.
 
 Outputs JSONL files under ``data/linkedin/`` — one file per UTC day plus
 an aggregate ``all_posts.jsonl`` deduplicated by URL.
@@ -58,8 +51,6 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# Search queries — each query is run against the configured provider.
-# Mix of DDD, agentic AI in industry verticals, and success-story phrasing.
 DEFAULT_QUERIES: list[str] = [
     '"domain-driven design" agentic AI',
     '"domain-driven" agents production',
@@ -75,7 +66,6 @@ DEFAULT_QUERIES: list[str] = [
     '"agentic solution" ROI results',
 ]
 
-# Keyword filter applied AFTER fetching — keeps only relevant posts.
 RELEVANCE_KEYWORDS: tuple[str, ...] = (
     "domain-driven",
     "domain driven",
@@ -98,10 +88,10 @@ class LinkedInPost:
     url: str
     title: str
     snippet: str
-    source: str
     matched_keywords: list[str]
+    source: str = "serpapi"
     author: str | None = None
-    posted_at: str | None = None  # ISO8601 if known
+    posted_at: str | None = None
     fetched_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
@@ -115,13 +105,10 @@ class ProviderError(RuntimeError):
     pass
 
 
-# ───────────────────────────── Providers ──────────────────────────────
-
-
 async def _search_serpapi(
     session: aiohttp.ClientSession, query: str, api_key: str
 ) -> list[LinkedInPost]:
-    """Use SerpAPI to Google-search ``site:linkedin.com/posts <query>``."""
+    """Google-search ``site:linkedin.com/posts <query>`` via SerpAPI."""
     params = {
         "engine": "google",
         "q": f'site:linkedin.com/posts {query}',
@@ -146,146 +133,25 @@ async def _search_serpapi(
                 url=link,
                 title=item.get("title", "").strip(),
                 snippet=item.get("snippet", "").strip(),
-                source="serpapi",
                 matched_keywords=[],
             )
         )
     return posts
-
-
-async def _search_rapidapi(
-    session: aiohttp.ClientSession,
-    query: str,
-    api_key: str,
-    api_host: str,
-) -> list[LinkedInPost]:
-    """Use a RapidAPI-listed LinkedIn data API (host configurable)."""
-    headers = {"x-rapidapi-key": api_key, "x-rapidapi-host": api_host}
-    params = {"keyword": query, "page": "1"}
-    url = f"https://{api_host}/search/posts"
-    async with session.get(url, headers=headers, params=params, timeout=30) as resp:
-        if resp.status != 200:
-            raise ProviderError(f"RapidAPI HTTP {resp.status}: {await resp.text()}")
-        data = await resp.json()
-
-    raw_items = data.get("data") or data.get("posts") or data.get("results") or []
-    posts: list[LinkedInPost] = []
-    for item in raw_items:
-        link = item.get("postUrl") or item.get("url") or item.get("link")
-        if not link:
-            continue
-        posts.append(
-            LinkedInPost(
-                id=LinkedInPost.stable_id(link),
-                url=link,
-                title=(item.get("title") or item.get("headline") or "").strip(),
-                snippet=(item.get("text") or item.get("snippet") or "").strip(),
-                author=(item.get("author") or {}).get("name")
-                if isinstance(item.get("author"), dict)
-                else item.get("author"),
-                posted_at=item.get("postedAt") or item.get("date"),
-                source="rapidapi",
-                matched_keywords=[],
-            )
-        )
-    return posts
-
-
-async def _search_linkedin_official(
-    session: aiohttp.ClientSession, query: str, access_token: str
-) -> list[LinkedInPost]:
-    """LinkedIn official Posts API. Requires partner-tier OAuth access."""
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-Restli-Protocol-Version": "2.0.0",
-    }
-    params = {"q": "keyword", "keywords": query, "count": "25"}
-    async with session.get(
-        "https://api.linkedin.com/v2/posts",
-        headers=headers,
-        params=params,
-        timeout=30,
-    ) as resp:
-        if resp.status != 200:
-            raise ProviderError(
-                f"LinkedIn API HTTP {resp.status}: {await resp.text()}"
-            )
-        data = await resp.json()
-
-    posts: list[LinkedInPost] = []
-    for item in data.get("elements", []):
-        urn = item.get("id", "")
-        link = f"https://www.linkedin.com/feed/update/{urn}" if urn else ""
-        if not link:
-            continue
-        commentary = (
-            item.get("commentary")
-            or item.get("specificContent", {})
-            .get("com.linkedin.ugc.ShareContent", {})
-            .get("shareCommentary", {})
-            .get("text", "")
-        )
-        posts.append(
-            LinkedInPost(
-                id=LinkedInPost.stable_id(link),
-                url=link,
-                title="",
-                snippet=commentary.strip(),
-                author=item.get("author"),
-                posted_at=item.get("createdAt"),
-                source="linkedin",
-                matched_keywords=[],
-            )
-        )
-    return posts
-
-
-# ─────────────────────────── Orchestration ────────────────────────────
 
 
 class LinkedInDailyScraper:
     def __init__(
         self,
-        provider: str | None = None,
         queries: Iterable[str] | None = None,
         output_dir: Path | None = None,
         run_hour_utc: int = 7,
     ) -> None:
-        self.provider = (
-            provider or os.getenv("LINKEDIN_SCRAPER_PROVIDER", "serpapi")
-        ).lower()
         self.queries = list(queries or DEFAULT_QUERIES)
         self.output_dir = output_dir or Path(__file__).resolve().parents[2] / "data" / "linkedin"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.aggregate_path = self.output_dir / "all_posts.jsonl"
         self.run_hour_utc = run_hour_utc
 
-    # ── provider dispatch ──
-    async def _fetch_for_query(
-        self, session: aiohttp.ClientSession, query: str
-    ) -> list[LinkedInPost]:
-        if self.provider == "serpapi":
-            key = os.getenv("SERPAPI_KEY", "")
-            if not key:
-                raise ProviderError("SERPAPI_KEY is not set")
-            return await _search_serpapi(session, query, key)
-
-        if self.provider == "rapidapi":
-            key = os.getenv("RAPIDAPI_KEY", "")
-            host = os.getenv("RAPIDAPI_HOST", "linkedin-data-api.p.rapidapi.com")
-            if not key:
-                raise ProviderError("RAPIDAPI_KEY is not set")
-            return await _search_rapidapi(session, query, key, host)
-
-        if self.provider == "linkedin":
-            token = os.getenv("LINKEDIN_ACCESS_TOKEN", "")
-            if not token:
-                raise ProviderError("LINKEDIN_ACCESS_TOKEN is not set")
-            return await _search_linkedin_official(session, query, token)
-
-        raise ProviderError(f"Unknown provider: {self.provider!r}")
-
-    # ── filtering & dedup ──
     @staticmethod
     def _match_keywords(text: str) -> list[str]:
         low = text.lower()
@@ -306,18 +172,22 @@ class LinkedInDailyScraper:
                     continue
         return seen
 
-    # ── one collection cycle ──
     async def collect_once(self) -> list[LinkedInPost]:
-        log.info("Cycle starting — provider=%s queries=%d", self.provider, len(self.queries))
+        api_key = os.getenv("SERPAPI_KEY", "")
+        if not api_key:
+            log.error("SERPAPI_KEY is not set — cannot run cycle")
+            return []
+
+        log.info("Cycle starting — queries=%d", len(self.queries))
         seen = self._seen_urls()
         results: dict[str, LinkedInPost] = {}
 
         async with aiohttp.ClientSession() as session:
             for query in self.queries:
                 try:
-                    posts = await self._fetch_for_query(session, query)
+                    posts = await _search_serpapi(session, query, api_key)
                 except ProviderError as exc:
-                    log.error("Provider error for %r: %s", query, exc)
+                    log.error("SerpAPI error for %r: %s", query, exc)
                     return []
                 except Exception as exc:
                     log.warning("Query %r failed: %s", query, exc)
@@ -334,7 +204,6 @@ class LinkedInDailyScraper:
                     p.matched_keywords = matched
                     results[p.url] = p
 
-                # be polite — small gap between queries
                 await asyncio.sleep(1.0)
 
         new_posts = list(results.values())
@@ -356,7 +225,6 @@ class LinkedInDailyScraper:
                 agg.write(line + "\n")
         log.info("Wrote %d posts to %s", len(posts), daily_path)
 
-    # ── daemon loop ──
     def _seconds_until_next_run(self) -> float:
         now = datetime.now(timezone.utc)
         target = datetime.combine(
@@ -378,17 +246,9 @@ class LinkedInDailyScraper:
             await asyncio.sleep(wait_s)
 
 
-# ────────────────────────────── CLI ───────────────────────────────────
-
-
 def _parse_args(argv: list[str]) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    p = argparse.ArgumentParser(description="LinkedIn daily scraper (SerpAPI)")
     p.add_argument("--once", action="store_true", help="Run a single cycle and exit")
-    p.add_argument(
-        "--provider",
-        choices=("serpapi", "rapidapi", "linkedin"),
-        help="Override LINKEDIN_SCRAPER_PROVIDER",
-    )
     p.add_argument(
         "--hour",
         type=int,
@@ -400,7 +260,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 async def _amain(argv: list[str]) -> int:
     args = _parse_args(argv)
-    scraper = LinkedInDailyScraper(provider=args.provider, run_hour_utc=args.hour)
+    scraper = LinkedInDailyScraper(run_hour_utc=args.hour)
     if args.once:
         await scraper.collect_once()
         return 0
